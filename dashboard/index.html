@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG pipeline for SMB Merchants</title>
+    <meta name="description"
+        content="AI-powered Australian SMB loan rate advisor with real-time guardrail validation, CDR data, and RBA signals.">
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="style.css">
+
+
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h2>RateAdvisor</h2>
+                    <span class="badge">RAG Guardrails v1.0</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="advisor">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="m12 16 4-4-4-4" />
+                        <path d="M8 12h8" />
+                    </svg>
+                    <span>Loan Rate Advisor</span>
+                </button>
+                <button class="nav-item" data-tab="signals">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                    </svg>
+                    <span>RBA & Market Signals</span>
+                </button>
+                <button class="nav-item" data-tab="comparison">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect width="18" height="18" x="3" y="3" rx="2" />
+                        <path d="M3 9h18" />
+                        <path d="M9 21V9" />
+                    </svg>
+                    <span>Guardrails Before/After</span>
+                </button>
+                <button class="nav-item" data-tab="audit">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" x2="8" y1="13" y2="13" />
+                        <line x1="16" x2="8" y1="17" y2="17" />
+                    </svg>
+                    <span>Audit Alert Logs</span>
+                </button>
+                <button class="nav-item" data-tab="config">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3" />
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                    <span>Configuration</span>
+                </button>
+            </nav>
+
+            <div id="ollama-status" class="system-status ollama-status-bar">
+                <div class="status-indicator unknown" id="status-light"></div>
+                <div class="status-info">
+                    <span class="status-title">Ollama + <span id="model-name">llama3.2:1b</span></span>
+                    <div class="status-sub-row">
+                        <span class="status-sub" id="ollama-status-sub">Initializing...</span>
+                        <button id="btn-refresh-ollama" class="refresh-btn" title="Check Connection Now (Heartbeat)">
+                            <svg id="refresh-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5">
+                                <path d="M21.5 2v6h-6M2.5 22v-6h6" />
+                                <path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M22 12.5a10 10 0 0 1-18.8 4.3L2.5 16" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header Bar -->
+            <header class="header-bar">
+                <div class="header-title">
+                    <h1 id="page-title">RAG pipeline for SMB Merchants</h1>
+                    <p class="subtitle">AI-guided interest rate lock-in decision engine for Australian SMBs</p>
+                </div>
+                <div class="header-actions">
+                    <div class="header-metrics">
+                        <div class="metric-pill">
+                            <span class="label">RBA Cash Rate</span>
+                            <span class="value" id="hdr-cash-rate">4.35%</span>
+                        </div>
+                        <div class="metric-pill">
+                            <span class="label">Pass Rate</span>
+                            <span class="value highlight" id="hdr-pass-rate">100%</span>
+                        </div>
+                    </div>
+                    <div class="theme-toggle">
+                        <button id="theme-toggle-btn" class="theme-btn" title="Toggle Theme">
+                            <svg id="sun-icon" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="5" />
+                                <path
+                                    d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                            </svg>
+                            <svg id="moon-icon" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- TAB 1: Advisor Interface -->
+            <section class="tab-content active" id="tab-advisor">
+                <div id="current-query-display" class="current-query hidden"></div>
+
+                <div class="query-grid">
+                    <!-- Query Input Card -->
+                    <div class="card glass shadow">
+                        <div class="card-header">
+                            <h3>Ask Rate Advisor</h3>
+                        </div>
+                        <div class="card-body">
+                            <label for="query-input" class="field-label">Select Sample Query or Type Question:</label>
+                            <div class="preset-pills">
+                                <button class="preset-btn">Should I lock in at 5.2%?</button>
+                                <button class="preset-btn">Is now a good time to refinance?</button>
+                                <button class="preset-btn">How will inflation affect my loan?</button>
+                            </div>
+                            <textarea id="query-input" rows="3"
+                                placeholder="Type your SMB loan query here..."></textarea>
+                            <button id="btn-submit-query" class="btn btn-primary" disabled>
+                                <span class="btn-text">Analyze & Advise</span>
+                                <span class="spinner hidden"></span>
+                            </button>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Customer Context Summary Card -->
+                    <div class="card glass">
+                        <div class="card-header customer-header">
+                            <div class="title-with-badge">
+                                <h3>CDR Loan Profile <span id="cdr-mode-badge" class="mode-badge mock">[CUSTOMER
+                                        SCENARIO]</span></h3>
+                            </div>
+                            <select id="customer-selector" class="form-control customer-select-sm">
+                                <option value="CUST_001">CUST_001: ABC Manufacturing (Established - Low Risk)</option>
+                                <option value="CUST_002">CUST_002: Fresh Start Bakery (New SMB - Very Low Risk)</option>
+                                <option value="CUST_003">CUST_003: Heavy Haulage (High Debt - High Risk)</option>
+                            </select>
+                        </div>
+                        <div class="card-body customer-summary">
+                            <div class="profile-row">
+                                <span class="lbl">Business Name:</span>
+                                <span class="val" id="cust-name">ABC Manufacturing Pty Ltd</span>
+                            </div>
+                            <div class="profile-row">
+                                <span class="lbl">Current Loan:</span>
+                                <span class="val" id="cust-loan">AUD $250,000 @ 4.8% (Var)</span>
+                            </div>
+                            <div class="profile-row">
+                                <span class="lbl">Monthly Payment:</span>
+                                <span class="val" id="cust-payment">AUD $4,500</span>
+                            </div>
+                            <div class="profile-row">
+                                <span class="lbl">Remaining Term:</span>
+                                <span class="val" id="cust-term">60 Months</span>
+                            </div>
+                            <div class="profile-row">
+                                <span class="lbl">Risk Profile:</span>
+                                <span class="val tag-low" id="cust-risk">Low Risk</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading State Indicator -->
+                <div id="loading-indicator" class="card glass highlight-card loading-card hidden">
+                    <div class="loading-content">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">
+                            <h4>Analyzing RAG Pipeline & Running Guardrails...</h4>
+                            <p>Fetching CDR loan profile, evaluating RBA signals & market sentiment, querying LLM, and
+                                verifying safety checks.</p>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- Results Container -->
+                <div class="results-container hidden" id="results-section">
+                    <div class="card glass highlight-card">
+                        <div class="result-header">
+                            <div class="status-badge" id="status-badge">
+                                <span id="status-text">✓ SAFE TO DEPLOY</span>
+                            </div>
+                            <div class="confidence-meter">
+                                <span>Confidence Score (Raw LLM Output):</span>
+                                <strong id="confidence-val">0.85</strong>
+                            </div>
+                        </div>
+
+                        <div class="recommendation-box">
+                            <h4>Advisor Guidance:</h4>
+                            <p id="advisor-answer-text">Loading advice...</p>
+                        </div>
+
+                        <!-- Retrieved RAG Sources & Citations Box -->
+                        <div class="sources-box">
+                            <h4>🔗 Retrieved Sources & Grounding Citations</h4>
+                            <p id="citations-para" class="citations-para">
+                                <!-- Populated dynamically by app.js -->
+                            </p>
+                        </div>
+
+                        <!-- Section 1: Guardrails Results -->
+                        <div class="sources-box eval-box">
+                            <h4>Guardrails Validation Results</h4>
+                            <div class="guardrails-grid">
+                                <div class="g-check-card" id="check-fact">
+                                    <div class="g-icon">✓</div>
+                                    <div class="g-info">
+                                        <h5>Fact-Check & Grounding</h5>
+                                        <p id="fact-reason">Citations verified, zero hallucinations</p>
+                                    </div>
+                                </div>
+                                <div class="g-check-card" id="check-conf">
+                                    <div class="g-icon">✓</div>
+                                    <div class="g-info">
+                                        <h5>Confidence Threshold</h5>
+                                        <p id="conf-reason">Score 0.85 >= threshold 0.70</p>
+                                    </div>
+                                </div>
+                                <div class="g-check-card" id="check-disc">
+                                    <div class="g-icon">✓</div>
+                                    <div class="g-info">
+                                        <h5>Risk Disclaimer</h5>
+                                        <p id="disc-reason">Professional broker disclaimer present</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: RAGAS Evals Scores -->
+                        <div class="sources-box eval-box">
+                            <h4>RAGAS Evaluation Scores</h4>
+                            <div class="metrics-row">
+                                <div class="metric-card">
+                                    <span class="m-val" id="m-context">0.85</span>
+                                    <span class="m-lbl">Context Relevance</span>
+                                </div>
+                                <div class="metric-card">
+                                    <span class="m-val" id="m-answer">0.88</span>
+                                    <span class="m-lbl">Answer Relevance</span>
+                                </div>
+                                <div class="metric-card">
+                                    <span class="m-val" id="m-faith">0.92</span>
+                                    <span class="m-lbl">Faithfulness</span>
+                                </div>
+                                <div class="metric-card highlight-card-sm">
+                                    <span class="m-val" id="m-avg">0.88</span>
+                                    <span class="m-lbl">Ragas Avg Score</span>
+                                    <span class="m-subtext" id="ragas-formula-sub">( (Context + Answer) Relevance
+                                        + Faithfulness) ÷ 3</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: RBA & Market Signals -->
+            <section class="tab-content" id="tab-signals">
+                <div class="signals-grid">
+                    <div class="card glass">
+                        <div class="card-header">
+                            <h3>RBA Monetary Stance</h3>
+                            <span class="chip hawkish" id="rba-stance-chip">Hawkish / Hold</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="rba-stance-grid">
+                                <div class="rba-stance-card">
+                                    <div class="rba-stance-value" id="rba-card-cash">4.35%</div>
+                                    <div class="rba-stance-label">Official Cash Rate</div>
+                                    <a href="https://www.rba.gov.au/statistics/cash-rate/" target="_blank"
+                                        rel="noopener noreferrer" class="rba-source-link">🔗 RBA Cash Rate Target</a>
+                                </div>
+                                <div class="rba-stance-card">
+                                    <div class="rba-stance-value" id="rba-card-cpi">3.2%</div>
+                                    <div class="rba-stance-label">Current Inflation</div>
+                                    <a href="https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/consumer-price-index-australia/latest-release"
+                                        target="_blank" rel="noopener noreferrer" class="rba-source-link">🔗 ABS CPI
+                                        Latest Release</a>
+                                </div>
+                                <div class="rba-stance-card">
+                                    <div class="rba-stance-value" id="rba-card-forecast">3.85%</div>
+                                    <div class="rba-stance-label">12M Forecast Rate</div>
+                                    <span class="rba-formula-sub" id="rba-formula-sub">Formula: <span
+                                            class="num-highlight">4.35%</span> Cash Rate - (<span
+                                            class="num-highlight">2</span> × <span class="num-highlight">0.25%</span>
+                                        Cuts) = <span class="num-highlight">3.85%</span></span>
+                                </div>
+                                <div class="rba-stance-card">
+                                    <div class="rba-stance-value" id="rba-card-cut-prob">58%</div>
+                                    <div class="rba-stance-label">Rate Cut Prob</div>
+                                    <div class="rba-stance-badge" id="rba-stance-badge">RBA Stance: HAWKISH</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card glass">
+                        <div class="card-header">
+                            <h3>Market Sentiment & News</h3>
+                        </div>
+                        <div class="card-body">
+                            <ul class="sentiment-list">
+                                <li>
+                                    <span class="dot pos"></span>
+                                    <span>Financial Aggregator: Rates expected to decline in H1 2026</span>
+                                </li>
+                                <li>
+                                    <span class="dot neu"></span>
+                                    <span>Analyst Consensus: Hold steady Q1, gradual cuts Q2</span>
+                                </li>
+                                <li>
+                                    <span class="dot pos"></span>
+                                    <span>Market Futures Pricing: Implied 12M cash rate at 3.85%</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+
+                </div>
+            </section>
+
+            <!-- TAB 3: Guardrails Before/After -->
+            <section class="tab-content" id="tab-comparison">
+                <div class="card glass">
+                    <div class="card-header">
+                        <h3>Guardrails Impact Analysis (Before vs After)</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="comparison-stats">
+                            <div class="comp-card">
+                                <h4>Faithfulness</h4>
+                                <div class="comp-bar-group">
+                                    <div class="comp-bar before" style="width: 42%;">Before: 42%</div>
+                                    <div class="comp-bar after" style="width: 90%;">After: 90%</div>
+                                </div>
+                            </div>
+
+                            <div class="comp-card">
+                                <h4>Context Relevance</h4>
+                                <div class="comp-bar-group">
+                                    <div class="comp-bar before" style="width: 38%;">Before: 38%</div>
+                                    <div class="comp-bar after" style="width: 84%;">After: 84%</div>
+                                </div>
+                            </div>
+
+                            <div class="comp-card">
+                                <h4>Hallucinations per Answer</h4>
+                                <div class="comp-bar-group">
+                                    <div class="comp-bar before-bad" style="width: 70%;">Before: 2.0 avg</div>
+                                    <div class="comp-bar after" style="width: 10%;">After: 0.0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: Audit Alert Logs -->
+            <section class="tab-content" id="tab-audit">
+                <div class="card glass">
+                    <div class="card-header">
+                        <h3>JSON Decision Audit Log (`logs/guardrails_alerts.json`)</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-wrapper">
+                            <table class="audit-table">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Query</th>
+                                        <th>Confidence</th>
+                                        <th>Checks Pass</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="audit-table-body">
+                                    <tr>
+                                        <td colspan="5" style="text-align:center;">Loading audit logs...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: Configuration -->
+            <section class="tab-content" id="tab-config">
+                <div class="panel config-panel card glass compact-panel">
+                    <div class="config-grid">
+                        <div class="config-col">
+                            <div class="config-section">
+                                <h3>🔌 Ollama Connection</h3>
+                                <div class="config-items">
+                                    <div class="config-item">
+                                        <label>Status</label>
+                                        <div id="ollama-connection-status" class="connection-status">
+                                            <span class="status-dot unknown"></span>
+                                            <span class="status-text">Checking...</span>
+                                        </div>
+                                    </div>
+                                    <div class="config-item">
+                                        <label>Base URL</label>
+                                        <div class="config-value">
+                                            <span id="ollama-url">http://localhost:11434</span>
+                                            <button class="copy-btn" data-copy-target="ollama-url" title="Copy Base URL">
+                                                <i class="fa-solid fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="config-item">
+                                        <label>Model</label>
+                                        <div class="config-value">
+                                            <span id="ollama-model">llama3.2:1b</span>
+                                            <button class="copy-btn" data-copy-target="ollama-model" title="Copy Model Name">
+                                                <i class="fa-solid fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="config-section">
+                                <h3>⚡ Execution & Data Mode</h3>
+                                <div class="config-items">
+                                    <div class="config-item">
+                                        <label>Environment</label>
+                                        <div class="config-value">
+                                            <span id="execution-mode">local</span>
+                                        </div>
+                                    </div>
+                                    <div class="config-item">
+                                        <label>Data Source</label>
+                                        <div class="config-value">
+                                            <span id="data-mode">Real</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Right Column -->
+                        <div class="config-col">
+                            <!-- 1. n8n Engine Section -->
+                            <div class="config-section">
+                                <div
+                                    style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap;">
+                                    <h3 style="margin: 0;">⚡ n8n Workflow Engine</h3>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-weight: 600; font-size: 0.88rem; color: var(--text-main);">
+                                            <code>USE_N8N_PIPELINE</code>
+                                        </span>
+                                        <label class="switch-label">
+                                            <input type="checkbox" id="toggle-n8n-pipeline" class="switch-input">
+                                            <span class="switch-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div id="n8n-status-container" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                    <div id="n8n-status-msg" style="font-size: 0.82rem; font-family: monospace; color: var(--text-muted);">
+                                        Python Native RAG pipeline active (http://localhost:8000)
+                                    </div>
+                                    <button class="copy-btn" data-copy-target="n8n-status-msg" title="Copy n8n status URL">
+                                        <i class="fa-solid fa-copy"></i>
+                                    </button>
+                                </div>
+                                <div id="n8n-details-container" class="config-items hidden"
+                                    style="transition: all 0.3s ease;">
+                                    <div class="config-item">
+                                        <label>n8n Webhook URL</label>
+                                        <div class="config-value">
+                                            <span id="n8n-url">http://localhost:5678</span>
+                                            <button class="copy-btn" data-copy-target="n8n-url" title="Copy n8n Webhook URL">
+                                                <i class="fa-solid fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. Independent Vector Database & Embeddings Section -->
+                            <div class="config-section">
+                                <h3>🗄️ Vector Database & Embeddings</h3>
+                                <div class="config-items">
+                                    <div class="config-item">
+                                        <label>Qdrant Vector DB</label>
+                                        <div class="config-value">
+                                            <span id="qdrant-url">http://localhost:6333/dashboard#/collections/loan_advisor_rag (loan_advisor_rag)</span>
+                                            <button class="copy-btn" data-copy-target="qdrant-url" title="Copy Qdrant Dashboard URL">
+                                                <i class="fa-solid fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="config-item">
+                                        <label>Embedding Model</label>
+                                        <div class="config-value">
+                                            <span id="embedding-model">nomic-embed-text (Ollama)</span>
+                                            <button class="copy-btn" data-copy-target="embedding-model" title="Copy Embedding Model Name">
+                                                <i class="fa-solid fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <br>
+                            <!-- Logging & Debugging Section with Mock Mode Explanation -->
+                            <div class="config-section">
+                                <h3>🛠️ Logging & Debugging</h3>
+                                <div class="config-items">
+                                    <div class="config-item">
+                                        <label>Log Level</label>
+                                        <div class="config-value" id="log-level">INFO</div>
+                                    </div>
+                                    <div class="config-item">
+                                        <label>Mock Mode</label>
+                                        <div id="mock-status" class="mock-status-badge">REAL DATA</div>
+                                    </div>
+                                </div>
+                                <div class="mock-explain-box"
+                                    style="margin-top: 10px; font-size: 0.82rem; color: var(--text-muted); line-height: 1.45; background: rgba(30, 41, 59, 0.4); padding: 10px 12px; border-radius: 8px; border-left: 3px solid var(--accent-yellow);">
+                                    <strong style="color: var(--accent-yellow); display: block; margin-bottom: 2px;">ℹ️
+                                        What is Mock Mode & Mock Data?</strong>
+                                    When active, the RAG pipeline uses pre-built synthetic CDR customer loan profiles
+                                    (<code>CUST_001</code>, <code>CUST_002</code>) and simulated RBA market signals so
+                                    the complete advisor workflow can execute locally without requiring live external
+                                    banking sandbox API keys.
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
