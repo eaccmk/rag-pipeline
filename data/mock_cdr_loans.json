@@ -1,0 +1,59 @@
+{
+  "CUST_001": {
+    "customer_id": "CUST_001",
+    "customer_name": "ABC Manufacturing Pty Ltd",
+    "customer_type": "SMB (Established)",
+    "loans": [
+      {
+        "loan_id": "LOAN_001",
+        "product_name": "Business Variable Rate Loan",
+        "principal_amount": 250000,
+        "current_rate": 4.8,
+        "rate_type": "variable",
+        "established_date": "2022-03-15",
+        "remaining_term_months": 60,
+        "monthly_payment": 4500,
+        "risk_profile": "Low Risk",
+        "lender": "Big Bank Australia"
+      }
+    ]
+  },
+  "CUST_002": {
+    "customer_id": "CUST_002",
+    "customer_name": "Fresh Start Bakery",
+    "customer_type": "SMB (New Startup)",
+    "loans": [
+      {
+        "loan_id": "LOAN_002",
+        "product_name": "Equipment Variable Loan",
+        "principal_amount": 50000,
+        "current_rate": 4.2,
+        "rate_type": "variable",
+        "established_date": "2024-01-10",
+        "remaining_term_months": 36,
+        "monthly_payment": 950,
+        "risk_profile": "Very Low Risk",
+        "lender": "Community Bank Australia"
+      }
+    ]
+  },
+  "CUST_003": {
+    "customer_id": "CUST_003",
+    "customer_name": "Heavy Haulage Pty Ltd",
+    "customer_type": "SMB (Highly Leveraged)",
+    "loans": [
+      {
+        "loan_id": "LOAN_003",
+        "product_name": "Fleet Commercial Loan",
+        "principal_amount": 1850000,
+        "current_rate": 5.9,
+        "rate_type": "variable",
+        "established_date": "2021-08-20",
+        "remaining_term_months": 120,
+        "monthly_payment": 28000,
+        "risk_profile": "High Risk",
+        "lender": "Metro Commercial Capital"
+      }
+    ]
+  }
+}
