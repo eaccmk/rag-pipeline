@@ -1,0 +1,41 @@
+services:
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant_vector_store
+    restart: unless-stopped
+    ports:
+      - "6333:6333" # HTTP REST API & Web Dashboard (http://localhost:6333/dashboard)
+      - "6334:6334" # gRPC API
+    volumes:
+      - qdrant_storage:/qdrant/storage
+      - /etc/localtime:/etc/localtime:ro # Sync container timezone dynamically with host
+      - /etc/timezone:/etc/timezone:ro   # Sync container timezone dynamically with host
+
+  # n8n Workflow Automation Engine
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n_automation
+    restart: unless-stopped
+    ports:
+      - "5678:5678" # n8n Web UI & Webhook Endpoint (http://localhost:5678)
+    environment:
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - /etc/localtime:/etc/localtime:ro # Sync container timezone dynamically with host
+      - /etc/timezone:/etc/timezone:ro   # Sync container timezone dynamically with host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - qdrant
+
+volumes:
+  qdrant_storage:
+    name: qdrant_storage
+    driver: local
+  n8n_data:
+    name: n8n_data
+    driver: local
