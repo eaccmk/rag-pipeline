@@ -11,7 +11,7 @@ A production-grade local RAG pipeline built for Australian SMB owners navigating
 
 |Demo|Walkthrough|
 |:-:|:-:|
-|[![Gif demo of RAG Pipeline](demo/assets/02_demo.gif)](https://www.youtube.com/watch?v=mS4pmnHNEBI)|[![Gif image of RAG pipline walkthrough with slides](demo/assets/01_walkthrough.gif)](https://www.youtube.com/watch?v=mS4pmnHNEBI)|
+|[![Gif demo of RAG Pipeline](demo/assets/02_demo_gif.gif)](https://www.youtube.com/watch?v=mS4pmnHNEBI)|[![Gif image of RAG pipline walkthrough with slides](demo/assets/01_walkthrough.gif)](https://www.youtube.com/watch?v=mS4pmnHNEBI)|
 
 
 

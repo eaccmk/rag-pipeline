@@ -1,1 +1,0 @@
-# Keep logs directory structure tracked in git while ignoring actual log files (*.log, *.json)
