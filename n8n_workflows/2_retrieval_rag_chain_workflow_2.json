@@ -80,7 +80,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:11434/api/generate",
+        "url": "http://host.docker.internal:11434/api/generate",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"model\": \"llama3.2:1b\",\n  \"prompt\": {{ JSON.stringify($json.prompt) }},\n  \"stream\": false\n}",

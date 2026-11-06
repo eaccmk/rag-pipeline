@@ -32,6 +32,26 @@ services:
     depends_on:
       - qdrant
 
+  # Flask Web Dashboard & Automated Evaluation API
+  dashboard:
+    build: .
+    container_name: rag_dashboard
+    restart: unless-stopped
+    ports:
+      - "8000:8000" # Web Dashboard & REST API (http://localhost:8000)
+    environment:
+      - DASHBOARD_HOST=0.0.0.0
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - N8N_BASE_URL=http://n8n:5678
+    volumes:
+      - .:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - qdrant
+
 volumes:
   qdrant_storage:
     name: qdrant_storage

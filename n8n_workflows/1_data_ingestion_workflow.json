@@ -102,7 +102,7 @@
     },
     {
       "parameters": {
-        "model": "llama3.2:1b",
+        "model": "nomic-embed-text",
         "baseUrl": "http://host.docker.internal:11434"
       },
       "id": "node-ollama-embeddings",
