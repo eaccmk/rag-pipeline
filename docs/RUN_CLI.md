@@ -84,7 +84,7 @@ curl -s http://localhost:8000/api/health
     },
     "qdrant": {
       "status": "available",
-      "url": "http://localhost:6333/healthz"
+      "url": "http://localhost:6333/"
     }
   },
   "last_check": "2026-08-02T16:54:55.970751+00:00",

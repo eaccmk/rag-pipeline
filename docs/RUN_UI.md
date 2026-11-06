@@ -42,15 +42,16 @@ curl -X PUT http://localhost:6333/collections/loan_advisor_rag \
   -d '{"vectors": {"size": 768, "distance": "Cosine"}}'
 ```
 
-### Step 3: Connect n8n Workflows
+### Step 3: Connect & Configure n8n Workflows
 1. Open n8n UI at **[http://localhost:5678/home/workflows](http://localhost:5678/home/workflows)**
 2. Click **`Add workflow`** > **`Import from file`**:
-   - Select `n8n_workflows/1_data_ingestion_workflow.json`
-   - Configure **Embeddings Ollama** node model to `nomic-embed-text` and credential Base URL to `http://host.docker.internal:11434`.
-   - Configure **Qdrant Vector Store** credential URL to `http://host.docker.internal:6333` (leave API key blank).
-   - Click **Save** & **Test Workflow** (populates 20 points into Qdrant!).
+   - Select `n8n_workflows/1_data_ingestion_workflow.json`.
+   - **Fix Qdrant Credentials**: Double-click **Qdrant Vector Store** -> click **Credential to connect with** -> select **Create new credential** -> set **Qdrant Server URL** to `http://host.docker.internal:6333` and leave API key blank -> click **Save**.
+   - **Configure Embeddings**: Double-click **Embeddings Ollama** -> ensure model is `nomic-embed-text` and Base URL is `http://host.docker.internal:11434`.
+   - Click **Save** in top right & **Test Workflow** (populates ~15–20 vector points into Qdrant!).
 3. Import **Workflow 2**:
-   - Select `n8n_workflows/2_retrieval_rag_chain_workflow.json`
+   - Select `n8n_workflows/2_retrieval_rag_chain_workflow.json`.
+   - Verify **Ollama LLM** URL is `http://host.docker.internal:11434/api/generate` with model `llama3.2:1b`.
    - Click **Save** and toggle top-right switch to **Active**.
 
 ---
@@ -66,12 +67,15 @@ curl -s http://localhost:11434/api/tags
 # 2. Verify Qdrant Vector Collection (status: "green")
 curl -s http://localhost:6333/collections/loan_advisor_rag
 
-# 3. Verify n8n Automation Engine
+# 3. Verify n8n Automation Engine (note the trailing 'z': /healthz)
 curl -s http://localhost:5678/healthz
 
-# 4. Verify Web Dashboard Backend Status
+# 4. Verify Web Dashboard Backend Status (/api/health or /health)
 curl -s http://localhost:8000/api/health
 ```
+
+> [!NOTE]
+> **Health Check Route Note**: The n8n container uses the Kubernetes standard `/healthz` probe endpoint with a `z`. Querying `/health` against n8n returns a 404 error. The Python Web Dashboard uses `/api/health`.
 
 ---
 
