@@ -21,8 +21,10 @@ DATA_DIR.mkdir(exist_ok=True)
 DASHBOARD_DIR.mkdir(exist_ok=True)
 
 # Ollama Configuration
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434") or "http://localhost:11434"
+if not (OLLAMA_BASE_URL.startswith("http://") or OLLAMA_BASE_URL.startswith("https://")):
+    OLLAMA_BASE_URL = f"http://{OLLAMA_BASE_URL}"
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:1b") or "llama3.2:1b"
 
 # Validate model format
 if ':' not in OLLAMA_MODEL:
@@ -50,19 +52,21 @@ DASHBOARD_PORT = int(os.getenv("DASHBOARD_PORT", "8000"))
 DASHBOARD_HOST = os.getenv("DASHBOARD_HOST", "0.0.0.0")
 
 # Vector Store & Database Configuration
-QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
+QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost") or "localhost"
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "loan_advisor_rag")
 
 # n8n Workflow Integration
-N8N_BASE_URL = os.getenv("N8N_BASE_URL", "http://localhost:5678")
+N8N_BASE_URL = os.getenv("N8N_BASE_URL", "http://localhost:5678") or "http://localhost:5678"
+if not (N8N_BASE_URL.startswith("http://") or N8N_BASE_URL.startswith("https://")):
+    N8N_BASE_URL = f"http://{N8N_BASE_URL}"
 N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/loan-advisor-query")
 USE_N8N_PIPELINE = os.getenv("USE_N8N_PIPELINE", "False").lower() == "true"
 
 # RAG Configuration
 RAG_CHUNK_SIZE = 500
 RAG_CHUNK_OVERLAP = 100
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "llama3.2:1b")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
 
 

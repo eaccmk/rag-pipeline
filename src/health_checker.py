@@ -77,7 +77,7 @@ class OllamaHealthChecker:
 
     def check_qdrant(self) -> Dict[str, Any]:
         from config import QDRANT_HOST, QDRANT_PORT
-        url = f"http://{QDRANT_HOST}:{QDRANT_PORT}/healthz"
+        url = f"http://{QDRANT_HOST}:{QDRANT_PORT}/"
         try:
             r = requests.get(url, timeout=2)
             return {"status": "available" if r.status_code == 200 else "unavailable", "url": url}

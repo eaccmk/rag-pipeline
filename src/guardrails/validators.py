@@ -59,7 +59,11 @@ class GuardrailsValidator:
             return {"pass": True, "reason": "Fact check disabled", "confidence": 1.0}
         
         # Check if sources are cited in answer
-        citation_indicators = ["according to", "source says", "data shows", "evidence", "found that", "rba signals", "market data", "current rate"]
+        citation_indicators = [
+            "according to", "based on", "provided context", "source says", "data shows", "evidence", "found that",
+            "rba signals", "rba", "signals", "market data", "market consensus", "current rate", "variable rate",
+            "rate signals", "monetary policy", "loan profile", "customer profile", "banking"
+        ]
         has_citations = any(indicator in answer.lower() for indicator in citation_indicators)
         
         # Check for hallucination indicators

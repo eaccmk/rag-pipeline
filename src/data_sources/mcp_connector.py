@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import requests
-from config import MCP_SERVER_URL, MCP_AUTH_TOKEN, BASE_DIR
+from config import MCP_SERVER_URL, MCP_AUTH_TOKEN, BASE_DIR, USE_MOCK_DATA
 
 from src.logger import StructuredLogger
 
@@ -18,20 +18,20 @@ class MCPConnector:
         self.server_url = server_url
         self.auth_token = auth_token
         self.mock_data_path = BASE_DIR / "data" / "mock_cdr_loans.json"
-        self.use_mock = not auth_token or auth_token == "your_token_here"
+        self.use_mock = USE_MOCK_DATA or (not auth_token or auth_token == "your_token_here")
         self.has_npx = shutil.which("npx") is not None
         
-        if self.has_npx:
+        if self.has_npx and not self.use_mock:
             logger.info("🔌 MCP Connector: Node/npx detected. open-banking-mcp stdio tool runner active.")
         else:
-            logger.warning("🔌 MCP Connector: npx not found. Running in MOCK mode for open-banking-mcp.")
+            logger.info("🔌 MCP Connector: Mock mode active for open-banking-mcp catalog.")
 
-    def call_mcp_tool(self, tool_name: str, arguments: Dict[str, Any], timeout_sec: int = 15) -> Dict[str, Any]:
+    def call_mcp_tool(self, tool_name: str, arguments: Dict[str, Any], timeout_sec: int = 4) -> Dict[str, Any]:
         """Execute a tool call against the open-banking-mcp stdio server."""
-        if not self.has_npx:
-            logger.warning(f"❌ MCP Connector: npx unavailable. Cannot call '{tool_name}'.")
-            return {"error": "npx command not found"}
+        if not self.has_npx or self.use_mock:
+            return {"error": "npx unavailable or mock mode enabled"}
         
+        proc = None
         try:
             logger.info(f"🔌 MCP Stdio Call: Requesting tool '{tool_name}' with args {arguments}")
             proc = subprocess.Popen(
@@ -42,50 +42,54 @@ class MCPConnector:
                 text=True
             )
             
-            # JSON-RPC Protocol Initialization
-            init_req = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "initialize",
-                "params": {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {},
-                    "clientInfo": {"name": "rag-pipeline-client", "version": "1.0.0"}
-                }
-            }
-            proc.stdin.write(json.dumps(init_req) + "\n")
-            proc.stdin.flush()
-            init_resp = proc.stdout.readline()
+            payload = "\n".join([
+                json.dumps({
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2024-11-05",
+                        "capabilities": {},
+                        "clientInfo": {"name": "rag-pipeline-client", "version": "1.0.0"}
+                    }
+                }),
+                json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}),
+                json.dumps({
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": tool_name,
+                        "arguments": arguments
+                    }
+                })
+            ]) + "\n"
             
-            # Send initialized notification
-            proc.stdin.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n")
-            proc.stdin.flush()
+            stdout_data, _ = proc.communicate(input=payload, timeout=timeout_sec)
             
-            # Tool call execution
-            call_req = {
-                "jsonrpc": "2.0",
-                "id": 2,
-                "method": "tools/call",
-                "params": {
-                    "name": tool_name,
-                    "arguments": arguments
-                }
-            }
-            proc.stdin.write(json.dumps(call_req) + "\n")
-            proc.stdin.flush()
+            for line in stdout_data.splitlines():
+                line = line.strip()
+                if line:
+                    try:
+                        res_data = json.loads(line)
+                        if res_data.get("id") == 2 or "result" in res_data:
+                            logger.info(f"✅ MCP Stdio Call: Received response for tool '{tool_name}' successfully")
+                            return res_data
+                    except json.JSONDecodeError:
+                        continue
             
-            response_line = proc.stdout.readline()
-            proc.terminate()
-            
-            if response_line:
-                res_data = json.loads(response_line)
-                logger.info(f"✅ MCP Stdio Call: Received response for tool '{tool_name}' successfully")
-                return res_data
-            else:
-                logger.error(f"❌ MCP Stdio Call: Empty response for tool '{tool_name}'")
-                return {"error": "Empty response from open-banking-mcp"}
-
+            return {"error": "No valid tool call response from open-banking-mcp"}
+        except subprocess.TimeoutExpired:
+            if proc:
+                proc.kill()
+            logger.warning(f"⚠️ MCP Stdio Call timed out ({timeout_sec}s) for tool '{tool_name}'")
+            return {"error": f"MCP tool '{tool_name}' timed out"}
         except Exception as e:
+            if proc:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
             logger.error(f"❌ MCP Stdio Error: Failed executing tool '{tool_name}': {e}")
             return {"error": str(e)}
 
@@ -341,6 +345,9 @@ class MCPConnector:
         - Direct tool execution with category="BUSINESS_LOANS" ensures zero latency waste on non-loan products.
         - High precision results are achieved directly from the official CDR open-banking-mcp schema.
         """
+        if self.use_mock or not self.has_npx:
+            return self._get_fallback_business_loans(requested_banks)
+
         default_banks = ["commbank", "nab", "westpac", "anz", "judo-bank", "macquarie-bank"]
         bank_alias_map = {
             "boq": "bank-of-queensland",
@@ -393,8 +400,8 @@ class MCPConnector:
                 break
         
         if not extracted_options:
-            logger.warning("🔌 MCP Connector: No live MCP bank options retrieved or MCP server unreachable.")
-            return []
+            logger.warning("🔌 MCP Connector: No live MCP bank options retrieved or MCP server unreachable. Using fallback catalog.")
+            return self._get_fallback_business_loans(requested_banks)
             
         # Prioritize requested banks in ordering, then sort remainder by rate
         prioritized = []
@@ -414,6 +421,49 @@ class MCPConnector:
         
         logger.info(f"🔌 MCP Connector: Selected top {len(final_top)} bank business loans: {[b['bank_name'] for b in final_top]}")
         return final_top
+
+    def _get_fallback_business_loans(self, requested_banks: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        """Fallback list of top business loans when open-banking-mcp is offline or unreachable."""
+        catalog = [
+            {
+                "bank_id": "commbank",
+                "bank_name": "Commonwealth Bank (CommBank)",
+                "product_name": "CommBank BetterBusiness Loan",
+                "interest_rate": 5.15,
+                "link": self.DEFAULT_BANK_URLS.get("commbank", "https://www.commbank.com.au/business/loans-and-finance.html"),
+                "status": "FALLBACK_CATALOG"
+            },
+            {
+                "bank_id": "nab",
+                "bank_name": "National Australia Bank (NAB)",
+                "product_name": "NAB Business Options Loan",
+                "interest_rate": 5.09,
+                "link": self.DEFAULT_BANK_URLS.get("nab", "https://www.nab.com.au/business/loans-and-finance/business-loans"),
+                "status": "FALLBACK_CATALOG"
+            },
+            {
+                "bank_id": "westpac",
+                "bank_name": "Westpac Banking Corporation",
+                "product_name": "Westpac Business Term Facility",
+                "interest_rate": 5.22,
+                "link": self.DEFAULT_BANK_URLS.get("westpac", "https://www.westpac.com.au/business-banking/loans-finance/"),
+                "status": "FALLBACK_CATALOG"
+            },
+            {
+                "bank_id": "anz",
+                "bank_name": "ANZ Banking Group",
+                "product_name": "ANZ Business Loan",
+                "interest_rate": 5.25,
+                "link": self.DEFAULT_BANK_URLS.get("anz", "https://www.anz.com.au/business/loans-finance/"),
+                "status": "FALLBACK_CATALOG"
+            }
+        ]
+        if requested_banks:
+            req_set = set(r.lower().strip() for r in requested_banks)
+            prioritized = [item for item in catalog if item["bank_id"] in req_set]
+            remainder = [item for item in catalog if item["bank_id"] not in req_set]
+            return (prioritized + remainder)[:3]
+        return catalog[:3]
 
     def get_customer_loans(self, customer_id: str) -> Dict[str, Any]:
         """Fetch customer loan data from CDR MCP."""

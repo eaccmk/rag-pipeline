@@ -21,9 +21,17 @@ To install the required LangChain packages via pip, run:
 
 
 """
+import sys
+from pathlib import Path
+
+# Add project root directory to sys.path
+BASE_DIR_PATH = Path(__file__).resolve().parent.parent
+if str(BASE_DIR_PATH) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR_PATH))
+
 import logging
 from typing import Dict, Any, List, Tuple
-from config import OLLAMA_BASE_URL, OLLAMA_MODEL, RAG_CHUNK_SIZE, RAG_CHUNK_OVERLAP, USE_MOCK_DATA
+from config import OLLAMA_BASE_URL, OLLAMA_MODEL, EMBEDDING_MODEL, RAG_CHUNK_SIZE, RAG_CHUNK_OVERLAP, USE_MOCK_DATA
 from src.data_sources import MCPConnector, RBAService, MarketSentimentService, SearchService
 from src.logger import StructuredLogger
 
@@ -84,7 +92,7 @@ class RAGPipeline:
                 )
                 self.embeddings = OllamaEmbeddings(
                     base_url=OLLAMA_BASE_URL,
-                    model=OLLAMA_MODEL
+                    model=EMBEDDING_MODEL
                 )
                 logger.info("Initialized Ollama LLM & Embeddings successfully.")
             except Exception as e:
