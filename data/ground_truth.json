@@ -1,0 +1,15 @@
+{
+  "Should I lock in at 5.2% given current market conditions?": {
+    "ground_truth_context": "Customer active business loan rate is 4.80% variable. Current RBA cash rate is 4.35% with neutral to easing outlook. Market sentiment anticipates potential rate cuts in late 2026. Locking in at 5.2% removes potential upside from future rate reductions.",
+    "expected_keywords": ["4.80%", "4.35%", "rba", "rate cuts", "consult"]
+  },
+  "What is the customer active business loan variable rate?": {
+    "ground_truth_context": "Customer CUST_001 active business loan variable interest rate is currently 4.80% per annum under the Australian CDR Banking profile.",
+    "expected_keywords": ["4.80%", "variable", "cust_001"]
+  },
+  "What are the top 3 open banking business loan options?": {
+    "ground_truth_context": "Open Banking MCP product catalog comparison highlights business loans from major Australian banks including Commonwealth Bank (CommBank), National Australia Bank (NAB), and Westpac Banking Corporation.",
+    "expected_keywords": ["commbank", "nab", "westpac", "business loan"]
+  }
+}
+

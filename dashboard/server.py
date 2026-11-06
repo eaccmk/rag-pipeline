@@ -46,11 +46,10 @@ mcp_connector = MCPConnector()
 def index():
     return send_from_directory(".", "index.html")
 
-@app.route("/<path:path>")
-def static_files(path):
-    return send_from_directory(".", path)
-
 @app.route("/api/health")
+@app.route("/api/healthz")
+@app.route("/health")
+@app.route("/healthz")
 def health_status():
     return jsonify(health_checker.check_health())
 
@@ -241,6 +240,61 @@ def get_comparison():
         "How will the RBA interest rate decision affect my loan?"
     ]
     return jsonify(comparison.run_comparison(pipeline, test_queries))
+
+@app.route("/api/eval", methods=["GET", "POST"])
+@app.route("/api/eval/", methods=["GET", "POST"])
+@app.route("/api/eval-suite", methods=["GET", "POST"])
+@app.route("/api/eval-suite/", methods=["GET", "POST"])
+@app.route("/api/evaluate", methods=["GET", "POST"])
+@app.route("/api/evaluate/", methods=["GET", "POST"])
+def run_evaluation_suite():
+    """Execute automated evaluation suite across golden test queries.
+    
+    Can be invoked via GET or POST:
+    - POST payload accepts optional `test_queries` (list), `customer_id` (str),
+      and `trigger_source` (e.g. 'n8n_workflow_1.1').
+    - Returns aggregate Ragas scores (context_relevance, faithfulness, answer_relevance)
+      and individual query evaluation results.
+    - Also records decisions into AlertLogger for the dashboard audit trail.
+    """
+    data = {}
+    if request.method == "POST":
+        data = request.json or {}
+        
+    test_queries = data.get("test_queries") or data.get("queries")
+    customer_id = data.get("customer_id", "CUST_001")
+    trigger_source = data.get("trigger_source", "manual")
+    
+    logger.info(f"📊 Starting Evaluation Suite run (trigger: {trigger_source}, queries: {len(test_queries) if test_queries else 'default golden'})")
+    
+    suite_results = evaluator.evaluate_suite(
+        pipeline=pipeline,
+        queries=test_queries,
+        customer_id=customer_id,
+        validator=validator
+    )
+    
+    # Log each evaluated query into alert logger
+    for item in suite_results.get("queries_evaluated", []):
+        alert_logger.log_decision(
+            query=f"[{trigger_source}] {item['query']}",
+            answer=item.get("answer_snippet", ""),
+            validation_results=item.get("validation_results", item.get("validation_checks", {})),
+            ragas_metrics=item.get("ragas_metrics", {})
+        )
+        
+    suite_results["trigger_source"] = trigger_source
+    suite_results["collection_tested"] = data.get("collection", QDRANT_COLLECTION)
+    
+    logger.info(f"✅ Evaluation Suite finished: status={suite_results['status']}, pass_rate={suite_results['pass_rate']}, overall_score={suite_results['aggregate_metrics']['overall_ragas_score']}")
+    
+    return jsonify(suite_results)
+
+@app.route("/<path:path>")
+def static_files(path):
+    if path.startswith("api/"):
+        return jsonify({"error": f"API endpoint /{path} not found"}), 404
+    return send_from_directory(".", path)
 
 if __name__ == "__main__":
     print(f"Starting Smart Loan Rate Advisor Web Dashboard at http://{DASHBOARD_HOST}:{DASHBOARD_PORT}")

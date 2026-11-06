@@ -22,7 +22,7 @@ To run evaluation tasks in python:
 """
 import logging
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from pathlib import Path
 from config import BASE_DIR
 
@@ -33,6 +33,121 @@ class RAGEvaluator:
     
     def __init__(self):
         self.ground_truth_path = BASE_DIR / "data" / "ground_truth.json"
+    
+    def load_ground_truth(self) -> Dict[str, Any]:
+        """Load ground truth mappings from file or fallback to defaults."""
+        if self.ground_truth_path.exists():
+            try:
+                with open(self.ground_truth_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.warning(f"Could not load ground truth file: {e}")
+        return {
+            "Should I lock in at 5.2% given current market conditions?": {
+                "ground_truth_context": "Customer active loan is 4.80% variable, RBA cash rate is 4.35% with potential cuts expected.",
+                "expected_keywords": ["4.80%", "4.35%", "rba"]
+            }
+        }
+    
+    def evaluate_suite(self,
+                       pipeline,
+                       queries: Optional[List[str]] = None,
+                       customer_id: str = "CUST_001",
+                       validator = None) -> Dict[str, Any]:
+        """Run an automated evaluation suite across golden test queries.
+        
+        Evaluates each query using the pipeline, checks guardrails validation,
+        computes Ragas metrics (context_relevance, answer_relevance, faithfulness),
+        and returns aggregate scores and individual breakdown.
+        """
+        import datetime
+        from src.guardrails import GuardrailsValidator
+        
+        if validator is None:
+            validator = GuardrailsValidator()
+            
+        ground_truths = self.load_ground_truth()
+        default_queries = [
+            "Should I lock in at 5.2% given current market conditions?",
+            "What is the customer active business loan variable rate?",
+            "What are the top 3 open banking business loan options?"
+        ]
+        
+        test_queries = queries if queries and len(queries) > 0 else default_queries
+        
+        query_results = []
+        total_context_rel = 0.0
+        total_answer_rel = 0.0
+        total_faithfulness = 0.0
+        total_avg_score = 0.0
+        passed_count = 0
+        
+        for q in test_queries:
+            gt_info = ground_truths.get(q, {})
+            gt_context = gt_info.get("ground_truth_context", "Interest rate advisory grounded context.")
+            
+            # Query pipeline
+            answer, sources, confidence = pipeline.query(q, customer_id)
+            
+            # Run Guardrails validation
+            is_valid, validation_results = validator.validate(answer, confidence, sources)
+            
+            # Run RAGAS metrics evaluation
+            ragas_metrics = self.evaluate_answer(q, answer, sources, gt_context)
+            
+            # Query passes if guardrails valid and ragas average >= 0.70
+            query_passed = is_valid and ragas_metrics["average_score"] >= 0.70
+            if query_passed:
+                passed_count += 1
+                
+            total_context_rel += ragas_metrics["context_relevance"]
+            total_answer_rel += ragas_metrics["answer_relevance"]
+            total_faithfulness += ragas_metrics["faithfulness"]
+            total_avg_score += ragas_metrics["average_score"]
+            
+            query_results.append({
+                "query": q,
+                "status": "PASSED" if query_passed else "FAILED",
+                "ragas_metrics": ragas_metrics,
+                "confidence": confidence,
+                "sources_count": len(sources),
+                "answer_snippet": answer[:150] + ("..." if len(answer) > 150 else ""),
+                "is_valid": is_valid,
+                "validation_results": validation_results,
+                "validation_checks": {
+                    "disclaimer": validation_results.get("disclaimer_check", {}).get("pass", False),
+                    "confidence": validation_results.get("confidence_check", {}).get("pass", False),
+                    "fact_check": validation_results.get("fact_check", {}).get("pass", False),
+                    "grounding": validation_results.get("fact_check", {}).get("pass", False)
+                }
+            })
+            
+        n = len(test_queries)
+        avg_ctx = round(total_context_rel / n, 2) if n > 0 else 0.0
+        avg_ans = round(total_answer_rel / n, 2) if n > 0 else 0.0
+        avg_fth = round(total_faithfulness / n, 2) if n > 0 else 0.0
+        avg_all = round(total_avg_score / n, 2) if n > 0 else 0.0
+        pass_rate = round((passed_count / n * 100), 1) if n > 0 else 0.0
+        
+        suite_status = "PASSED" if passed_count == n else ("PARTIAL" if passed_count > 0 else "FAILED")
+        
+        return {
+            "status": suite_status,
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "customer_id": customer_id,
+            "total_queries": n,
+            "passed_queries": passed_count,
+            "failed_queries": n - passed_count,
+            "pass_rate": f"{pass_rate}%",
+            "aggregate_metrics": {
+                "context_relevance": avg_ctx,
+                "answer_relevance": avg_ans,
+                "faithfulness": avg_fth,
+                "overall_ragas_score": avg_all
+            },
+            "queries_evaluated": query_results,
+            "message": f"Evaluation completed: {passed_count}/{n} queries passed with overall Ragas score {avg_all:.2f}."
+        }
     
     def evaluate_answer(self,
                        query: str,

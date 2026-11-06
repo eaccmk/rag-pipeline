@@ -64,3 +64,21 @@ def test_api_query_python_native(client):
     assert "confidence" in data
     assert "validation" in data
     assert "ragas_metrics" in data
+
+def test_api_eval_suite(client):
+    response = client.post("/api/eval", json={
+        "trigger_source": "test_runner",
+        "test_queries": [
+            "Should I lock in at 5.2% given current market conditions?"
+        ]
+    })
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "status" in data
+    assert "aggregate_metrics" in data
+    assert "context_relevance" in data["aggregate_metrics"]
+    assert "faithfulness" in data["aggregate_metrics"]
+    assert "answer_relevance" in data["aggregate_metrics"]
+    assert "overall_ragas_score" in data["aggregate_metrics"]
+    assert data["total_queries"] == 1
+    assert len(data["queries_evaluated"]) == 1
